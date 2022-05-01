@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
-import { SqsHandlerService } from './sqs.handler.service';
+import { ConfigModule } from '@nestjs/config';
+import { ForecastModule } from './forecast/forecast.module';
 
 @Module({
-  imports: [],
-  providers: [SqsHandlerService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    ForecastModule,
+  ],
+  providers: [],
 })
 export class AppModule {}

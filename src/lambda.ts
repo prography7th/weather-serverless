@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Callback, Context, Handler } from 'aws-lambda';
 import { AppModule } from './app.module';
-import { SqsHandlerService } from './sqs.handler.service';
+import { ForecastService } from './forecast/forecast.service';
 
 export const handler: Handler = async (
   event: any,
@@ -10,10 +10,10 @@ export const handler: Handler = async (
   callback: Callback,
 ) => {
   const appContext = await NestFactory.createApplicationContext(AppModule);
-  const sqsService = appContext.get(SqsHandlerService);
+  const forecastService = appContext.get(ForecastService);
 
   return {
-    body: sqsService.handleSqsEvent(event),
+    body: forecastService.handleSqsEvent(event),
     statusCode: HttpStatus.OK,
   };
 };

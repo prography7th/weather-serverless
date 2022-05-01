@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
 
@@ -39,11 +39,33 @@ export class ForecastService {
   }
 
   async handleSqsEvent(event) {
-    if (!(event == null)) {
+    if (event == null) {
       return false;
     }
-    event.Records.forEach((records) => {
-      console.log(JSON.stringify(records, null, 2));
+    event.Records.forEach(async (record) => {
+      const infor = JSON.parse(record.body);
+      const { code, lat, lon } = infor.data;
+      const now = new Date()
+        .toLocaleString('en-GB', { hour12: false })
+        .split(', ');
+      const hour = parseInt(now[1].split(':')[0]);
+      const [year, month, day] = now[0].split('/').reverse();
+      const TODAY = `${year}${month}${day}`;
+      const YESTERDAY = `${year}${month}${
+        parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
+      }`;
+      const baseDate = 2 < hour && hour < 24 ? TODAY : YESTERDAY;
+      const baseTime = 2 < hour && hour < 24 ? '0200' : '2300';
+
+      Logger.log(infor, lat, lon, baseDate, baseTime);
+      const todayInformations = await this.getTodayInfo(
+        lat,
+        lon,
+        baseDate,
+        baseTime,
+      );
+      Logger.log(todayInformations);
+      console.log(JSON.stringify(todayInformations, null, 2));
     });
     return { success: true };
   }

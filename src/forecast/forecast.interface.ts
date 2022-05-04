@@ -18,22 +18,23 @@ export interface Report {
   };
 }
 
-export interface Time {
-  date: string;
+export interface WeatherMetadata {
+  date?: string;
   time: string;
-  sky: number;
-  tmp: number;
-  pop: number;
+  sky: string;
+  tmp: string;
+  pop?: string;
+  pty: string;
 }
 
 export interface Day {
   report: Report;
-  timeline: Time[];
+  timeline: WeatherMetadata[];
 }
 
-export interface Weather {
+export interface TodayInfo {
   [key: string]: {
     report: Report;
-    timeline: Time[];
+    timeline: WeatherMetadata[];
   };
 }

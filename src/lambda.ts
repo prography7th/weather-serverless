@@ -1,38 +1,28 @@
-// lambda.ts
-import { Handler, Context } from 'aws-lambda';
-import { Server } from 'http';
-import { createServer, proxy } from 'aws-serverless-express';
-import { eventContext } from 'aws-serverless-express/middleware';
-
+import { HttpStatus } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ExpressAdapter } from '@nestjs/platform-express';
+import { Callback, Context, Handler } from 'aws-lambda';
 import { AppModule } from './app.module';
+import { ForecastService } from './forecast/forecast.service';
 
-const express = require('express');
+const test = {
+  Records: [
+    {
+      body: '{"test":true,"data":{"code":"1111051500","lat":37.48685107621001,"lon":126.83860422707822}}',
+    },
+  ],
+};
 
-// NOTE: If you get ERR_CONTENT_DECODING_FAILED in your browser, this is likely
-// due to a compressed response (e.g. gzip) which has not been handled correctly
-// by aws-serverless-express and/or API Gateway. Add the necessary MIME types to
-// binaryMimeTypes below
-const binaryMimeTypes: string[] = [];
+export const handler: Handler = async (
+  event: any,
+  context: Context,
+  callback: Callback,
+) => {
+  const appContext = await NestFactory.createApplicationContext(AppModule);
+  const forecastService = appContext.get(ForecastService);
+  const datas = await forecastService.handleSqsEvent(event);
 
-let cachedServer: Server;
-
-async function bootstrapServer(): Promise<Server> {
-  if (!cachedServer) {
-    const expressApp = express();
-    const nestApp = await NestFactory.create(
-      AppModule,
-      new ExpressAdapter(expressApp),
-    );
-    nestApp.use(eventContext());
-    await nestApp.init();
-    cachedServer = createServer(expressApp, undefined, binaryMimeTypes);
-  }
-  return cachedServer;
-}
-
-export const handler: Handler = async (event: any, context: Context) => {
-  cachedServer = await bootstrapServer();
-  return proxy(cachedServer, event, context, 'PROMISE').promise;
+  console.log(JSON.stringify(datas, null, 2));
+  return {
+    statusCode: HttpStatus.OK,
+  };
 };

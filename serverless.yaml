@@ -3,6 +3,7 @@ plugins:
   - 'serverless-plugin-typescript'
   - 'serverless-plugin-optimize'
   - 'serverless-offline'
+  - 'serverless-dotenv-plugin'
 
 provider:
   name: aws
@@ -17,4 +18,3 @@ functions:
       - sqs:
           arn: arn:aws:sqs:ap-northeast-2:315199840269:area.fifo
           batchSize: 10
-          maximumBatchingWindow: 10

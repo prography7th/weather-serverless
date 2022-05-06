@@ -24,7 +24,7 @@ export const handler: Handler = async (
   const appContext = await NestFactory.createApplicationContext(AppModule);
   const forecastService = appContext.get(ForecastService);
   const contentsService = appContext.get(ContentsService);
-
+  console.log('test message in lambda handler');
   const datas = (await forecastService.handleSqsEvent(event)) as TodayInfo[];
 
   console.log(JSON.stringify(datas, null, 2));

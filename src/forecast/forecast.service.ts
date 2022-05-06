@@ -10,9 +10,13 @@ import {
 } from './forecast.interface';
 import { dfs_xy_conv } from './converter';
 import axios from 'axios';
+import { RedisService } from '../redis/redis.service';
 @Injectable()
 export class ForecastService {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private redisService: RedisService,
+  ) {}
 
   private groupBy(data: any[], key: string): { [key: string]: any[] } {
     return data.reduce((acc, cur) => {
@@ -73,8 +77,15 @@ export class ForecastService {
         baseDate,
         baseTime,
       );
-
+      this.redisService.setData(`${code}:${baseDate}`, todayInformations);
       datas.push(todayInformations);
+
+      //test
+      console.log('redis test start!');
+      const data = await this.redisService.getData(`${code}:${baseDate}`);
+      console.log(data);
+      console.log('redis test end!');
+      //
     }
 
     return datas;

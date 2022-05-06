@@ -5,14 +5,16 @@ import { AppModule } from './app.module';
 import { ContentsService } from './contents/contents.service';
 import { TodayInfo } from './forecast/forecast.interface';
 import { ForecastService } from './forecast/forecast.service';
-import { sampleData } from './contents/sample';
-const test = {
-  Records: [
-    {
-      body: '{"test":true,"data":{"code":"1111051500","lat":37.48685107621001,"lon":126.83860422707822}}',
-    },
-  ],
-};
+
+// const test = {
+//   Records: [
+//     {
+//       body: '{"test":true,"data":{"code":"1111051500","lat":37.48685107621001,"lon":126.83860422707822}}',
+//     },
+//   ],
+// };
+// const target = contentsService.handleContents(sampleData.today);
+// console.log(JSON.stringify(target, null, 2));
 
 export const handler: Handler = async (
   event: any,
@@ -22,12 +24,13 @@ export const handler: Handler = async (
   const appContext = await NestFactory.createApplicationContext(AppModule);
   const forecastService = appContext.get(ForecastService);
   const contentsService = appContext.get(ContentsService);
+
   const datas = (await forecastService.handleSqsEvent(event)) as TodayInfo[];
 
   console.log(JSON.stringify(datas, null, 2));
 
   for (let data of datas) {
-    const target = contentsService.handleContents(event.today);
+    const target = contentsService.handleContents(data.today);
     console.log(JSON.stringify(target, null, 2));
   }
 

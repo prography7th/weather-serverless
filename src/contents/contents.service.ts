@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Day, TodayInfo } from 'src/forecast/forecast.interface';
+import { Day, TodayInfo } from '../forecast/forecast.interface';
 
 @Injectable()
 export class ContentsService {

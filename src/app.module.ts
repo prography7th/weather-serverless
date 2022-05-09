@@ -10,7 +10,6 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
       isGlobal: true,
     }),
     RedisModule.forRoot({
-      readyLog: true,
       config: {
         url: process.env.REDIS_URL,
       },

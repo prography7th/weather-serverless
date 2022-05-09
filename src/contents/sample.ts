@@ -1,5 +1,13 @@
 import { TodayInfo } from 'src/forecast/forecast.interface';
 
+export const sampleEvent: any = {
+  Records: [
+    {
+      body: '{"test":true,"data":{"code":"1111051500","lat":37.48685107621001,"lon":126.83860422707822}}',
+    },
+  ],
+};
+
 export const sampleData: TodayInfo = {
   today: {
     report: {

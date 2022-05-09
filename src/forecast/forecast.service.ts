@@ -84,7 +84,7 @@ export class ForecastService {
 
       await this.redis.set(
         `${code}:${baseDate}`,
-        JSON.stringify({ data: 'test' }),
+        JSON.stringify(todayInformations),
         'EX',
         600,
       );

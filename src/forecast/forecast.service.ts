@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
 import {
   Day,
   Report,
@@ -10,9 +9,18 @@ import {
 } from './forecast.interface';
 import { dfs_xy_conv } from './converter';
 import axios from 'axios';
+import { RedisService } from '@liaoliaots/nestjs-redis';
+import Redis from 'ioredis';
+
 @Injectable()
 export class ForecastService {
-  constructor(private configService: ConfigService) {}
+  private readonly redis: Redis;
+  constructor(
+    private configService: ConfigService,
+    private redisService: RedisService,
+  ) {
+    this.redis = this.redisService.getClient();
+  }
 
   private groupBy(data: any[], key: string): { [key: string]: any[] } {
     return data.reduce((acc, cur) => {
@@ -74,7 +82,17 @@ export class ForecastService {
         baseTime,
       );
 
+      await this.redis.set(
+        `${code}:${baseDate}`,
+        JSON.stringify(todayInformations),
+        'EX',
+        600,
+      );
+
       datas.push(todayInformations);
+
+      const data = await this.redis.get(`${code}:${baseDate}`);
+      console.log(data);
     }
 
     return datas;

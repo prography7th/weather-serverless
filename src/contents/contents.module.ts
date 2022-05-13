@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ContentsService } from './contents.service';
 
 @Module({
-  providers: [ContentsService]
+  providers: [ContentsService],
+  exports: [ContentsService],
 })
 export class ContentsModule {}

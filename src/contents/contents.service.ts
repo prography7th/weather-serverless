@@ -1,9 +1,17 @@
+import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
-import { Day, TodayInfo } from '../forecast/forecast.interface';
+import Redis from 'ioredis';
+import { Day } from '../forecast/forecast.interface';
 
 @Injectable()
 export class ContentsService {
-  handleContents(todayInformations: Day) {
+  private readonly redis: Redis;
+
+  constructor(private redisService: RedisService) {
+    this.redis = this.redisService.getClient();
+  }
+
+  public handleContents(redisKey: string, todayInformations: Day) {
     const targets = todayInformations.timeline
       .filter((infor) => Number(infor.pop) >= 50)
       .map((v) => {
@@ -24,8 +32,7 @@ export class ContentsService {
           pty,
         };
       });
-
-    return targets.map((t) => {
+    const contents = targets.map((t) => {
       const [subMessage, mainMessage] = this.getMessage(t);
       return {
         ...t,
@@ -33,6 +40,7 @@ export class ContentsService {
         subMessage,
       };
     });
+    this.redis.set(redisKey, JSON.stringify(contents), 'EX', 600);
   }
 
   getMessage(infor: any): [string, string] {

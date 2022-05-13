@@ -11,6 +11,21 @@ import { dfs_xy_conv } from './converter';
 import axios from 'axios';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
+import { ContentsService } from 'src/contents/contents.service';
+
+export function getWeatherTime(): [string, string] {
+  // baseDate, baseTime 구하기
+  const now = new Date().toLocaleString('en-GB', { hour12: false }).split(', ');
+  const hour = parseInt(now[1].split(':')[0]);
+  const [year, month, day] = now[0].split('/').reverse();
+  const TODAY = `${year}${month}${day}`;
+  const YESTERDAY = `${year}${month}${
+    parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
+  }`;
+  const baseDate = 2 < hour && hour < 24 ? TODAY : YESTERDAY;
+  const baseTime = 2 < hour && hour < 24 ? '0200' : '2300';
+  return [baseDate, baseTime];
+}
 
 @Injectable()
 export class ForecastService {
@@ -18,6 +33,7 @@ export class ForecastService {
   constructor(
     private configService: ConfigService,
     private redisService: RedisService,
+    private contentsService: ContentsService,
   ) {
     this.redis = this.redisService.getClient();
   }
@@ -27,6 +43,32 @@ export class ForecastService {
       (acc[cur[key]] = acc[cur[key]] || []).push(cur);
       return acc;
     }, {});
+  }
+
+  public async handleSqsEvent(event): Promise<void | false> {
+    if (event == null) {
+      throw new Error('event not found');
+    }
+    const [baseDate, baseTime] = getWeatherTime();
+    for (const record of event.Records) {
+      const infor = JSON.parse(record.body);
+      const { code, lat, lon } = infor.data;
+      const redisKey = `${code}:${baseDate}`;
+
+      const todayInformations = await this.getTodayInfo(
+        String(lat),
+        String(lon),
+        baseDate,
+        baseTime,
+      );
+      this.redis.set(redisKey, JSON.stringify(todayInformations), 'EX', 600);
+      this.setContent(redisKey, todayInformations);
+    }
+  }
+
+  private setContent(redisKey: string, data: TodayInfo) {
+    redisKey = redisKey + ':content';
+    this.contentsService.handleContents(redisKey, data.today);
   }
 
   private async requestShort(
@@ -53,52 +95,7 @@ export class ForecastService {
     return responseData.response.body.items.item;
   }
 
-  async handleSqsEvent(event) {
-    if (event == null) {
-      return false;
-    }
-
-    const datas: TodayInfo[] = [];
-    for (const record of event.Records) {
-      const infor = JSON.parse(record.body);
-      const { code, lat, lon } = infor.data;
-      // baseDate, baseTime 구하기
-      const now = new Date()
-        .toLocaleString('en-GB', { hour12: false })
-        .split(', ');
-      const hour = parseInt(now[1].split(':')[0]);
-      const [year, month, day] = now[0].split('/').reverse();
-      const TODAY = `${year}${month}${day}`;
-      const YESTERDAY = `${year}${month}${
-        parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
-      }`;
-      const baseDate = 2 < hour && hour < 24 ? TODAY : YESTERDAY;
-      const baseTime = 2 < hour && hour < 24 ? '0200' : '2300';
-
-      const todayInformations = await this.getTodayInfo(
-        String(lat),
-        String(lon),
-        baseDate,
-        baseTime,
-      );
-
-      await this.redis.set(
-        `${code}:${baseDate}`,
-        JSON.stringify(todayInformations),
-        'EX',
-        600,
-      );
-
-      datas.push(todayInformations);
-
-      const data = await this.redis.get(`${code}:${baseDate}`);
-      console.log(data);
-    }
-
-    return datas;
-  }
-
-  async getTodayInfo(
+  private async getTodayInfo(
     lat: string,
     lon: string,
     baseDate: string,

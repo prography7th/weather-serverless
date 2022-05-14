@@ -9,6 +9,9 @@ provider:
   name: aws
   runtime: nodejs14.x
   region: ap-northeast-2
+  iam:
+    role: arn:aws:iam::315199840269:policy/TeamFiveLambdaExecution
+    deploymentRole: arn:aws:iam::315199840269:policy/TeamFiveServerless
 
 functions:
   main: # The name of the lambda function

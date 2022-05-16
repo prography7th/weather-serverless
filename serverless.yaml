@@ -1,4 +1,4 @@
-service: nest-serverless-lambda-demo
+service: team-five-weather-lambda
 plugins:
   - 'serverless-plugin-typescript'
   - 'serverless-plugin-optimize'
@@ -9,6 +9,8 @@ provider:
   name: aws
   runtime: nodejs14.x
   region: ap-northeast-2
+  iam:
+    role: arn:aws:iam::594292838648:role/serverless-lambda
 
 functions:
   main: # The name of the lambda function
@@ -17,5 +19,5 @@ functions:
     handler: ./src/lambda.handler
     events:
       - sqs:
-          arn: arn:aws:sqs:ap-northeast-2:315199840269:area.fifo
+          arn: arn:aws:sqs:ap-northeast-2:594292838648:weather.fifo
           batchSize: 10

@@ -1,4 +1,4 @@
-service: nest-serverless-lambda-demo
+service: team-five-weather-lambda
 plugins:
   - 'serverless-plugin-typescript'
   - 'serverless-plugin-optimize'
@@ -10,8 +10,7 @@ provider:
   runtime: nodejs14.x
   region: ap-northeast-2
   iam:
-    role: arn:aws:iam::315199840269:policy/TeamFiveLambdaExecution
-    deploymentRole: arn:aws:iam::315199840269:policy/TeamFiveServerless
+    role: arn:aws:iam::315199840269:role/test-role
 
 functions:
   main: # The name of the lambda function

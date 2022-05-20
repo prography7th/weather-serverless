@@ -1,4 +1,4 @@
-import { TodayInfo } from 'src/forecast/forecast.interface';
+import { TodayInfo } from '../forecast/forecast.interface';
 
 export const sampleEvent: any = {
   Records: [

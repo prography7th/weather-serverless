@@ -12,7 +12,7 @@ export const handler: Handler = async (
   const appContext = await NestFactory.createApplicationContext(AppModule);
   const forecastService = appContext.get(ForecastService);
   try {
-    forecastService.handleSqsEvent(event);
+    await forecastService.handleSqsEvent(event);
   } catch (err) {
     console.error(err);
   }

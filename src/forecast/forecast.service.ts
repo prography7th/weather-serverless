@@ -11,7 +11,7 @@ import { dfs_xy_conv } from './converter';
 import axios from 'axios';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
-import { ContentsService } from 'src/contents/contents.service';
+import { ContentsService } from '../contents/contents.service';
 
 export function getWeatherTime(): [string, string] {
   // baseDate, baseTime 구하기
@@ -61,14 +61,19 @@ export class ForecastService {
         baseDate,
         baseTime,
       );
-      this.redis.set(redisKey, JSON.stringify(todayInformations), 'EX', 600);
-      this.setContent(redisKey, todayInformations);
+      await this.redis.set(
+        redisKey,
+        JSON.stringify(todayInformations),
+        'EX',
+        60 * 60 * 24 * 2,
+      );
+      await this.setContent(redisKey, todayInformations);
     }
   }
 
-  private setContent(redisKey: string, data: TodayInfo) {
+  private async setContent(redisKey: string, data: TodayInfo): Promise<void> {
     redisKey = redisKey + ':content';
-    this.contentsService.handleContents(redisKey, data.today);
+    await this.contentsService.handleContents(redisKey, data.today);
   }
 
   private async requestShort(

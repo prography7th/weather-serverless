@@ -54,20 +54,23 @@ export class ForecastService {
       const infor = JSON.parse(record.body);
       const { code, lat, lon } = infor.data;
       const redisKey = `${code}:${baseDate}`;
-
-      const todayInformations = await this.getTodayInfo(
-        String(lat),
-        String(lon),
-        baseDate,
-        baseTime,
-      );
-      await this.redis.set(
-        redisKey,
-        JSON.stringify(todayInformations),
-        'EX',
-        60 * 60 * 24 * 2,
-      );
-      await this.setContent(redisKey, todayInformations);
+      try {
+        const todayInformations = await this.getTodayInfo(
+          String(lat),
+          String(lon),
+          baseDate,
+          baseTime,
+        );
+        await this.redis.set(
+          redisKey,
+          JSON.stringify(todayInformations),
+          'EX',
+          60 * 60 * 24 * 2,
+        );
+        await this.setContent(redisKey, todayInformations);
+      } catch (err) {
+        console.error(err);
+      }
     }
   }
 

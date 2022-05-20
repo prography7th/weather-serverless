@@ -15,9 +15,9 @@ provider:
 functions:
   main: # The name of the lambda function
     # The module 'handler' is exported in the file 'src/lambda'
-    timeout: 180
+    timeout: 30
     handler: ./src/lambda.handler
     events:
       - sqs:
           arn: arn:aws:sqs:ap-northeast-2:594292838648:weather.fifo
-          batchSize: 10
+          batchSize: 1

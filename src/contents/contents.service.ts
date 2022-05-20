@@ -11,7 +11,10 @@ export class ContentsService {
     this.redis = this.redisService.getClient();
   }
 
-  public handleContents(redisKey: string, todayInformations: Day) {
+  public async handleContents(
+    redisKey: string,
+    todayInformations: Day,
+  ): Promise<void> {
     const targets = todayInformations.timeline
       .filter((infor) => Number(infor.pop) >= 50)
       .map((v) => {
@@ -40,7 +43,12 @@ export class ContentsService {
         subMessage,
       };
     });
-    this.redis.set(redisKey, JSON.stringify(contents), 'EX', 600);
+    await this.redis.set(
+      redisKey,
+      JSON.stringify(contents),
+      'EX',
+      60 * 60 * 24 * 2,
+    );
   }
 
   getMessage(infor: any): [string, string] {

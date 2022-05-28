@@ -15,7 +15,7 @@ provider:
 functions:
   main: # The name of the lambda function
     # The module 'handler' is exported in the file 'src/lambda'
-    timeout: 60
+    timeout: 70
     handler: ./src/lambda.handler
     events:
       - sqs:

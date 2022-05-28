@@ -7,25 +7,11 @@ import {
   TodayInfo,
   WeatherMetadata,
 } from './forecast.interface';
-import { dfs_xy_conv } from './converter';
 import axios from 'axios';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { ContentsService } from '../contents/contents.service';
-
-export function getWeatherTime(): [string, string] {
-  // baseDate, baseTime 구하기
-  const now = new Date().toLocaleString('en-GB', { hour12: false }).split(', ');
-  const hour = parseInt(now[1].split(':')[0]);
-  const [year, month, day] = now[0].split('/').reverse();
-  const TODAY = `${year}${month}${day}`;
-  const YESTERDAY = `${year}${month}${
-    parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
-  }`;
-  const baseDate = 2 < hour && hour < 24 ? TODAY : YESTERDAY;
-  const baseTime = 2 < hour && hour < 24 ? '0200' : '2300';
-  return [baseDate, baseTime];
-}
+import { FCST_TIMES } from './forecast.interface';
 
 @Injectable()
 export class ForecastService {
@@ -38,40 +24,56 @@ export class ForecastService {
     this.redis = this.redisService.getClient();
   }
 
+  public async handleSqsEvent(event): Promise<void> {
+    if (event == null) {
+      throw new Error('event not found');
+    }
+    const [baseDate, baseTime] = this.getWeatherTime();
+    const jobQueue: Array<Promise<boolean>> = [];
+    for (const record of event.Records) {
+      const infor = JSON.parse(record.body);
+      const { code, x, y } = infor.data;
+      const redisKey = `${code}:${baseDate}`;
+      jobQueue.push(
+        this.processWeatherInformation(x, y, baseDate, baseTime, redisKey),
+      );
+    }
+    await Promise.allSettled(jobQueue);
+  }
+
+  private async processWeatherInformation(
+    x: number,
+    y: number,
+    baseDate: string,
+    baseTime: string,
+    redisKey: string,
+  ): Promise<boolean> {
+    try {
+      const todayInformations = await this.getTodayInfo(
+        Number(x),
+        Number(y),
+        baseDate,
+        baseTime,
+      );
+      await this.redis.set(
+        redisKey,
+        JSON.stringify(todayInformations),
+        'EX',
+        FCST_TIMES.CACHE_TTL,
+      );
+      await this.setContent(redisKey, todayInformations);
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+    return true;
+  }
+
   private groupBy(data: any[], key: string): { [key: string]: any[] } {
     return data.reduce((acc, cur) => {
       (acc[cur[key]] = acc[cur[key]] || []).push(cur);
       return acc;
     }, {});
-  }
-
-  public async handleSqsEvent(event): Promise<void | false> {
-    if (event == null) {
-      throw new Error('event not found');
-    }
-    const [baseDate, baseTime] = getWeatherTime();
-    for (const record of event.Records) {
-      const infor = JSON.parse(record.body);
-      const { code, lat, lon } = infor.data;
-      const redisKey = `${code}:${baseDate}`;
-      try {
-        const todayInformations = await this.getTodayInfo(
-          String(lat),
-          String(lon),
-          baseDate,
-          baseTime,
-        );
-        await this.redis.set(
-          redisKey,
-          JSON.stringify(todayInformations),
-          'EX',
-          60 * 60 * 24 * 2,
-        );
-        await this.setContent(redisKey, todayInformations);
-      } catch (err) {
-        console.error(err);
-      }
-    }
   }
 
   private async setContent(redisKey: string, data: TodayInfo): Promise<void> {
@@ -104,8 +106,8 @@ export class ForecastService {
   }
 
   private async getTodayInfo(
-    lat: string,
-    lon: string,
+    x: number,
+    y: number,
     baseDate: string,
     baseTime: string,
   ): Promise<TodayInfo> {
@@ -134,10 +136,7 @@ export class ForecastService {
       return { report, timeline };
     }
 
-    if (!lat || !lon) throw new BadRequestException();
-
-    // 기상청 XY좌표로 변환
-    const { x, y } = dfs_xy_conv('toXY', lat, lon);
+    if (!x || !y) throw new BadRequestException();
 
     // 날씨 데이터 요청
     const SHORT_END_POINT = this.configService.get('SHORT_END_POINT');
@@ -179,5 +178,21 @@ export class ForecastService {
     result['today'].report.maxPop = { value: maxPop, time };
 
     return result;
+  }
+
+  private getWeatherTime(): [string, string] {
+    // baseDate, baseTime 구하기
+    const now = new Date()
+      .toLocaleString('en-GB', { hour12: false })
+      .split(', ');
+    const hour = parseInt(now[1].split(':')[0]);
+    const [year, month, day] = now[0].split('/').reverse();
+    const TODAY = `${year}${month}${day}`;
+    const YESTERDAY = `${year}${month}${
+      parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
+    }`;
+    const baseDate = hour > FCST_TIMES.CACHE_TIME ? TODAY : YESTERDAY;
+    const baseTime = '2300';
+    return [baseDate, baseTime];
   }
 }

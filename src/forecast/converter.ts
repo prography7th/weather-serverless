@@ -1,3 +1,8 @@
+/**
+ * converter
+ * @deprecated
+ */
+
 export function dfs_xy_conv(code, v1, v2): any {
   //
   // LCC DFS 좌표변환을 위한 기초 자료

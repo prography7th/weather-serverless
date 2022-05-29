@@ -38,3 +38,8 @@ export interface TodayInfo {
     timeline: WeatherMetadata[];
   };
 }
+
+export enum FCST_TIMES {
+  CACHE_TIME = 23,
+  CACHE_TTL = 60 * 60 * 25,
+}

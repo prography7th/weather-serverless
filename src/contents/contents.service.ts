@@ -1,6 +1,7 @@
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
+import { FCST_TIMES } from '../forecast/forecast.interface';
 import { Day } from '../forecast/forecast.interface';
 
 @Injectable()
@@ -47,7 +48,7 @@ export class ContentsService {
       redisKey,
       JSON.stringify(contents),
       'EX',
-      60 * 60 * 24 * 2,
+      FCST_TIMES.CACHE_TTL,
     );
   }
 

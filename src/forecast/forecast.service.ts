@@ -11,7 +11,24 @@ import axios from 'axios';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { ContentsService } from '../contents/contents.service';
+<<<<<<< HEAD
 import { FCST_TIMES } from './forecast.interface';
+=======
+
+export function getWeatherTime(): [string, string] {
+  // baseDate, baseTime 구하기
+  const now = new Date().toLocaleString('en-GB', { hour12: false }).split(', ');
+  const hour = parseInt(now[1].split(':')[0]);
+  const [year, month, day] = now[0].split('/').reverse();
+  const TODAY = `${year}${month}${day}`;
+  const YESTERDAY = `${year}${month}${
+    parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
+  }`;
+  const baseDate = 2 < hour && hour < 24 ? TODAY : YESTERDAY;
+  const baseTime = 2 < hour && hour < 24 ? '0200' : '2300';
+  return [baseDate, baseTime];
+}
+>>>>>>> main
 
 @Injectable()
 export class ForecastService {

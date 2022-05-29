@@ -26,7 +26,7 @@ export class ForecastService {
 
   public async handleSqsEvent(event): Promise<void> {
     if (event == null) {
-      throw new Error('event not found');
+      throw new Error('event not found!');
     }
     const [baseDate, baseTime] = this.getWeatherTime();
     const jobQueue: Array<Promise<boolean>> = [];

@@ -12,16 +12,19 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { ContentsService } from '../contents/contents.service';
 import { FCST_TIMES } from './forecast.interface';
+import { curriedDateFormation, getYYYYMMDD } from './time';
 
 @Injectable()
 export class ForecastService {
   private readonly redis: Redis;
+  private cachedGrid: Set<string>;
   constructor(
     private configService: ConfigService,
     private redisService: RedisService,
     private contentsService: ContentsService,
   ) {
     this.redis = this.redisService.getClient();
+    this.cachedGrid = new Set<string>();
   }
 
   public async handleSqsEvent(event): Promise<void> {
@@ -32,13 +35,18 @@ export class ForecastService {
     const jobQueue: Array<Promise<boolean>> = [];
     for (const record of event.Records) {
       const infor = JSON.parse(record.body);
-      const { code, x, y } = infor.data;
-      const redisKey = `${code}:${baseDate}`;
-      jobQueue.push(
-        this.processWeatherInformation(x, y, baseDate, baseTime, redisKey),
-      );
+      const { x, y } = infor.data;
+      const grid = `${String(x).padStart(3, '0')}${String(y).padStart(3, '0')}`;
+      if (!this.cachedGrid.has(grid)) {
+        this.cachedGrid.add(grid);
+        const redisKey = `${grid}:${baseDate}`;
+        jobQueue.push(
+          this.processWeatherInformation(x, y, baseDate, baseTime, redisKey),
+        );
+      }
     }
     await Promise.allSettled(jobQueue);
+    this.cachedGrid.clear();
   }
 
   private async processWeatherInformation(
@@ -181,18 +189,9 @@ export class ForecastService {
   }
 
   private getWeatherTime(): [string, string] {
-    // baseDate, baseTime 구하기
-    const now = new Date()
-      .toLocaleString('en-GB', { hour12: false })
-      .split(', ');
-    const hour = parseInt(now[1].split(':')[0]);
-    const [year, month, day] = now[0].split('/').reverse();
-    const TODAY = `${year}${month}${day}`;
-    const YESTERDAY = `${year}${month}${
-      parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
-    }`;
-    const baseDate = hour > FCST_TIMES.CACHE_TIME ? TODAY : YESTERDAY;
     const baseTime = '2300';
-    return [baseDate, baseTime];
+    if (new Date().getHours() === FCST_TIMES.CACHE_TIME)
+      return [curriedDateFormation(getYYYYMMDD)('TODAY'), baseTime];
+    return [curriedDateFormation(getYYYYMMDD)('YESTER_DAY'), baseTime];
   }
 }

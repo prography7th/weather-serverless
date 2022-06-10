@@ -17,14 +17,12 @@ import { curriedDateFormation, getYYYYMMDD } from './time';
 @Injectable()
 export class ForecastService {
   private readonly redis: Redis;
-  private cachedGrid: Set<string>;
   constructor(
     private configService: ConfigService,
     private redisService: RedisService,
     private contentsService: ContentsService,
   ) {
     this.redis = this.redisService.getClient();
-    this.cachedGrid = new Set<string>();
   }
 
   public async handleSqsEvent(event): Promise<void> {
@@ -37,16 +35,12 @@ export class ForecastService {
       const infor = JSON.parse(record.body);
       const { x, y } = infor.data;
       const grid = `${String(x).padStart(3, '0')}${String(y).padStart(3, '0')}`;
-      if (!this.cachedGrid.has(grid)) {
-        this.cachedGrid.add(grid);
-        const redisKey = `${grid}:${baseDate}`;
-        jobQueue.push(
-          this.processWeatherInformation(x, y, baseDate, baseTime, redisKey),
-        );
-      }
+      const redisKey = `${grid}:${baseDate}`;
+      jobQueue.push(
+        this.processWeatherInformation(x, y, baseDate, baseTime, redisKey),
+      );
     }
     await Promise.allSettled(jobQueue);
-    this.cachedGrid.clear();
   }
 
   private async processWeatherInformation(
@@ -85,7 +79,6 @@ export class ForecastService {
   }
 
   private async setContent(redisKey: string, data: TodayInfo): Promise<void> {
-    redisKey = redisKey + ':content';
     await this.contentsService.handleContents(redisKey, data.today);
   }
 

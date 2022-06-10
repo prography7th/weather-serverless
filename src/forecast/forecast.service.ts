@@ -79,6 +79,7 @@ export class ForecastService {
   }
 
   private async setContent(redisKey: string, data: TodayInfo): Promise<void> {
+    redisKey = redisKey + ':content';
     await this.contentsService.handleContents(redisKey, data.today);
   }
 

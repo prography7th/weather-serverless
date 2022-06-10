@@ -12,6 +12,7 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { ContentsService } from '../contents/contents.service';
 import { FCST_TIMES } from './forecast.interface';
+import { curriedDateFormation, getYYYYMMDD } from './time';
 
 @Injectable()
 export class ForecastService {
@@ -188,18 +189,9 @@ export class ForecastService {
   }
 
   private getWeatherTime(): [string, string] {
-    // baseDate, baseTime 구하기
-    const now = new Date()
-      .toLocaleString('en-GB', { hour12: false })
-      .split(', ');
-    const hour = parseInt(now[1].split(':')[0]);
-    const [year, month, day] = now[0].split('/').reverse();
-    const TODAY = `${year}${month}${day}`;
-    const YESTERDAY = `${year}${month}${
-      parseInt(day) - 1 < 10 ? `0${parseInt(day) - 1}` : parseInt(day) - 1
-    }`;
-    const baseDate = hour > FCST_TIMES.CACHE_TIME ? TODAY : YESTERDAY;
     const baseTime = '2300';
-    return [baseDate, baseTime];
+    if (new Date().getHours() === FCST_TIMES.CACHE_TIME)
+      return [curriedDateFormation(getYYYYMMDD)('TODAY'), baseTime];
+    return [curriedDateFormation(getYYYYMMDD)('YESTER_DAY'), baseTime];
   }
 }

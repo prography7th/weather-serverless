@@ -12,7 +12,6 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { ContentsService } from '../contents/contents.service';
 import { FCST_TIMES } from './forecast.interface';
-import { curriedDateFormation, getYYYYMMDD } from './time';
 
 @Injectable()
 export class ForecastService {
@@ -29,11 +28,12 @@ export class ForecastService {
     if (event == null) {
       throw new Error('event not found!');
     }
-    const [baseDate, baseTime] = this.getWeatherTime();
     const jobQueue: Array<Promise<boolean>> = [];
     for (const record of event.Records) {
       const infor = JSON.parse(record.body);
       const { x, y } = infor.data;
+      const { baseDate, baseTime: baseT_ } = infor.data;
+      const baseTime = baseT_.length === 1 ? '0' + baseT_ : baseT_;
       const grid = `${String(x).padStart(3, '0')}${String(y).padStart(3, '0')}`;
       const redisKey = `${grid}:${baseDate}`;
       jobQueue.push(
@@ -79,6 +79,7 @@ export class ForecastService {
   }
 
   private async setContent(redisKey: string, data: TodayInfo): Promise<void> {
+    redisKey = redisKey + ':content';
     await this.contentsService.handleContents(redisKey, data.today);
   }
 
@@ -179,12 +180,5 @@ export class ForecastService {
     result['today'].report.maxPop = { value: maxPop, time };
 
     return result;
-  }
-
-  private getWeatherTime(): [string, string] {
-    const baseTime = '2300';
-    if (new Date().getHours() === FCST_TIMES.CACHE_TIME)
-      return [curriedDateFormation(getYYYYMMDD)('TODAY'), baseTime];
-    return [curriedDateFormation(getYYYYMMDD)('YESTER_DAY'), baseTime];
   }
 }

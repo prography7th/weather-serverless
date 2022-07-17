@@ -40,6 +40,6 @@ export interface TodayInfo {
 }
 
 export enum FCST_TIMES {
-  CACHE_TIME = 23,
-  CACHE_TTL = 60 * 60 * 25,
+  CACHE_TTL = 60 * 60 * 4,
+  BASE_COUNT_TTL = 60 * 60 * 24 * 3,
 }

@@ -12,13 +12,15 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { ContentsService } from '../contents/contents.service';
 import { FCST_TIMES } from './forecast.interface';
-import { curriedDateFormation, getYYYYMMDD } from './time';
+import { WeatherBaseHelper } from './weatherBase.helper';
 
 @Injectable()
 export class ForecastService {
   private readonly redis: Redis;
+  private isBaseContent: boolean;
   constructor(
     private configService: ConfigService,
+    private weatherHelper: WeatherBaseHelper,
     private redisService: RedisService,
     private contentsService: ContentsService,
   ) {
@@ -29,18 +31,34 @@ export class ForecastService {
     if (event == null) {
       throw new Error('event not found!');
     }
-    const [baseDate, baseTime] = this.getWeatherTime();
     const jobQueue: Array<Promise<boolean>> = [];
     for (const record of event.Records) {
       const infor = JSON.parse(record.body);
-      const { x, y } = infor.data;
+      const { x, y, isBaseContent } = infor.data;
+      const { baseDate, baseTime: baseT_ } = infor.data;
+      const baseTime = baseT_.length === 1 ? '0' + baseT_ : baseT_;
       const grid = `${String(x).padStart(3, '0')}${String(y).padStart(3, '0')}`;
       const redisKey = `${grid}:${baseDate}`;
+
+      this.checkIsBaseContents(Number(isBaseContent));
+
       jobQueue.push(
-        this.processWeatherInformation(x, y, baseDate, baseTime, redisKey),
+        this.processWeatherInformation(
+          x,
+          y,
+          baseDate,
+          baseTime,
+          redisKey,
+          grid,
+        ),
       );
     }
     await Promise.allSettled(jobQueue);
+  }
+
+  private checkIsBaseContents(isBaseContent: number) {
+    if (isBaseContent === 1) this.isBaseContent = true;
+    else this.isBaseContent = false;
   }
 
   private async processWeatherInformation(
@@ -49,6 +67,7 @@ export class ForecastService {
     baseDate: string,
     baseTime: string,
     redisKey: string,
+    grid: string,
   ): Promise<boolean> {
     try {
       const todayInformations = await this.getTodayInfo(
@@ -57,6 +76,9 @@ export class ForecastService {
         baseDate,
         baseTime,
       );
+      if (baseTime == '0200' && this.isBaseContent) {
+        this.weatherHelper.setBaseData(grid, todayInformations);
+      }
       await this.redis.set(
         redisKey,
         JSON.stringify(todayInformations),
@@ -79,6 +101,7 @@ export class ForecastService {
   }
 
   private async setContent(redisKey: string, data: TodayInfo): Promise<void> {
+    redisKey = redisKey + ':content';
     await this.contentsService.handleContents(redisKey, data.today);
   }
 
@@ -179,12 +202,5 @@ export class ForecastService {
     result['today'].report.maxPop = { value: maxPop, time };
 
     return result;
-  }
-
-  private getWeatherTime(): [string, string] {
-    const baseTime = '2300';
-    if (new Date().getHours() === FCST_TIMES.CACHE_TIME)
-      return [curriedDateFormation(getYYYYMMDD)('TODAY'), baseTime];
-    return [curriedDateFormation(getYYYYMMDD)('YESTER_DAY'), baseTime];
   }
 }
